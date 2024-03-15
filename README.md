@@ -1,8 +1,9 @@
 # Code structure
 
-- tool/: Write processed files
+- tool/: Process files
 - prod/: Reproduce each figure
-- *.py, stat/, vs_atm/: Local library
+- ./*.py, csm/, stat/, vs_atm/: Local library
+
 
 # Workflow
 
@@ -41,6 +42,8 @@
 - tool/lasso/coef.py: Get the coefficient from each estimated model
 - prod/fig9_scatter_lasso_coef.py
 
+
 # Note
 
+- Figures S1 and S2 can be generated with prod/fig8_scatter_bpdef_importance.py and prod/fig9_scatter_lasso_coef.py, respectively
 - Some original libraries are not included (e.g., searching for available files on a local server)
