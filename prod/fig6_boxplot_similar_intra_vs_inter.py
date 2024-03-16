@@ -162,6 +162,87 @@ def draw(*args):
     plt.close()
     return
 
+def draw_kernel_density(*args):
+    from sklearn.neighbors import KernelDensity
+    stat_names = ['JC', 'CC', 'RMSD']
+    width_ax, height_ax = 2, 1.5
+    nrows, ncols = 4, len(stat_names)
+
+    data = ll.prod.load_pickle()
+    axsize = (1, 1)
+    gsfig = figlib.GridSpecFig(nrows=nrows, ncols=ncols, axsize=axsize,
+        wspace=0.4, hspace=0.2)
+    dict_range = {}
+    for (irow, prop_name), (icol, stat_name) in itertools.product(enumerate(ll.PROP_NAMES), enumerate(stat_names)):
+        ax = gsfig[irow, icol]
+        _data = [data[(prop_name, stat_name, mode)] for mode in ('intra', 'inter')]
+        bp = ax.boxplot(_data, showfliers=False,
+            whis=(5, 95))
+        vmin, vmax = ax.get_ylim()
+        dict_range[(prop_name, stat_name)] = (vmin, vmax)
+    del gsfig
+
+    # -----------------------------------------------------------------------------------------------
+
+    axsize = (2, 1.5)
+    gsfig = figlib.GridSpecFig(nrows=nrows, ncols=ncols, axsize=axsize,
+        wspace=0.4, hspace=0.3)
+    kernel = 'gaussian'
+    #kernel = 'epanechnikov'
+    dict_mode_color = {
+        'intra': 'royalblue',
+        'inter': 'crimson',
+    }
+    dict_mode_longname = {
+        'intra': 'Intra-model',
+        'inter': 'Inter-model',
+    }
+    for (irow, prop_name), (icol, stat_name) in itertools.product(enumerate(ll.PROP_NAMES), enumerate(stat_names)):
+        print(prop_name, stat_name)
+        ax = gsfig[irow, icol]
+
+        vmin, vmax = dict_range[(prop_name, stat_name)]
+        vdif = vmax - vmin
+        vmin -= 0.8 * vdif
+        vmax += 0.8 * vdif
+        if stat_name in ('JC', 'CC'): vmax = min(vmax, 1)
+        if stat_name == 'RMSD': vmin = max(vmin, 0)
+        #else:
+        #    vmin, vmax = 0, 0.15
+        x = np.linspace(vmin, vmax, 1000)
+
+        for mode in ('intra', 'inter'):
+            _data = np.array(data[(prop_name, stat_name, mode)])
+            bandwidth = scott=np.sqrt(np.var(_data, ddof=1)*((len(_data))**(-1/5))**2) # Scott
+            kde = KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(_data[:, None])
+            log_dens = kde.score_samples(x[:, None])
+            ax.plot(x, np.exp(log_dens), color=dict_mode_color[mode], label=dict_mode_longname)
+        ax.set_xlim(vmin, vmax)
+
+        if gsfig.is_bottom(irow) and gsfig.is_right(icol):
+            _ax = figlib.axesutil.add_axes(ax, (0, -0.4, 1, 0.2))
+            figlib.util.legend(_ax,
+                [{'color': dict_mode_color[mode]} for mode in ('intra', 'inter')],
+                [dict_mode_longname[mode] for mode in ('intra', 'inter')],
+                ncols=2)
+
+    irow = 0
+    for icol, stat_name in enumerate(stat_names):
+        text = f' ({("i", "ii", "iii")[icol]}) {stat_name}'
+        ax = gsfig[irow, icol]
+        ax.set_title(text)
+
+    icol = 0
+    for irow, prop_name in enumerate(ll.PROP_NAMES):
+        text = f'({"abcd"[irow]}) {ll.figure.DICT_PROP_NAME[prop_name]}'
+        ax = gsfig[irow, icol]
+        ax.set_ylabel(text)
+
+    ll.prod.savefig()
+    plt.show()
+    plt.close()
+# ===================================================================================================
 if __name__=='__main__':
     #save(*sys.argv)
-    draw(*sys.argv)
+    #draw(*sys.argv)
+    draw_kernel_density(*sys.argv)
